@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:ktx_management_app/features/student/screens/student_dashboard_screen.dart';
+import 'package:ktx_management_app/core/models/user_model.dart';
+import 'package:ktx_management_app/core/services/auth_service.dart';
 import 'package:ktx_management_app/features/management/screens/management_dashboard_screen.dart';
 import 'package:ktx_management_app/features/security/screens/security_dashboard_screen.dart';
-import '../../../core/models/user_model.dart';
-import '../../../core/services/auth_service.dart';
+import 'package:ktx_management_app/features/student/screens/student_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,87 +13,74 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _authService = AuthService();
-  bool _isLoading = false;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
 
   void _login() async {
-    setState(() {
-      _isLoading = true;
-    });
+    // For demonstration, we'll use hardcoded credentials
+    // In a real app, you would call a service to authenticate.
+    final role = _authService.login(_emailController.text, _passwordController.text);
 
-    final user = await _authService.login(
-      _usernameController.text,
-      _passwordController.text,
-    );
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (user != null && mounted) {
-      // Đăng nhập thành công, điều hướng dựa trên vai trò
-      _navigateToDashboard(user.role);
-    } else if (mounted) {
-      // Hiển thị thông báo lỗi
+    if (role != null && mounted) {
+      Widget page;
+      switch (role) {
+        case UserRole.student:
+          page = const StudentDashboardScreen();
+          break;
+        case UserRole.management:
+          page = const ManagementDashboardScreen();
+          break;
+        case UserRole.security:
+          page = const SecurityDashboardScreen();
+          break;
+        case UserRole.unknown:
+          // Should not happen with the current logic, but good to handle
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid credentials')),
+          );
+          return;
+      }
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => page),
+      );
+    } else {
+      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tên đăng nhập hoặc mật khẩu không đúng!')),
+        const SnackBar(content: Text('Invalid credentials')),
       );
     }
-  }
-
-  void _navigateToDashboard(UserRole role) {
-    Widget page;
-    switch (role) {
-      case UserRole.student:
-        page = const StudentDashboardScreen();
-        break;
-      case UserRole.management:
-        page = const ManagementDashboardScreen();
-        break;
-      case UserRole.security:
-        page = const SecurityDashboardScreen();
-        break;
-      default:
-      // Trường hợp không xác định, quay lại màn hình đăng nhập
-        return;
-    }
-
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => page),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Đăng nhập KTX')),
+      appBar: AppBar(
+        title: const Text('Login'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'Tên đăng nhập'),
-              // Gợi ý tài khoản để test
-              // Tạm điền sẵn để test nhanh: sv01, bql01, bv01. Mật khẩu đều là '123'
-              onTap: () => _usernameController.text = 'sv01',
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email (student@, management@, security@)',
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Mật khẩu'),
+              decoration: const InputDecoration(
+                labelText: 'Password (password)',
+              ),
               obscureText: true,
-              onTap: () => _passwordController.text = '123',
             ),
-            const SizedBox(height: 24),
-            _isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
+            const SizedBox(height: 32),
+            ElevatedButton(
               onPressed: _login,
-              child: const Text('Đăng nhập'),
+              child: const Text('Login'),
             ),
           ],
         ),
